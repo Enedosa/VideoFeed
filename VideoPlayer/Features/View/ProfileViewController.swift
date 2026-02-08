@@ -8,84 +8,6 @@
 import UIKit
 
 
-final class ProfileViewControllerr: UIViewController {
-
-    private let vm: ProfileViewModel
-
-    private let avatarImageView: UIImageView = {
-        let iv = UIImageView()
-        iv.contentMode = .scaleAspectFill
-        iv.clipsToBounds = true
-        iv.layer.cornerRadius = 40
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        return iv
-    }()
-
-    private let infoLabel: UILabel = {
-        let lbl = UILabel()
-        lbl.numberOfLines = 0
-        lbl.textAlignment = .center
-        lbl.font = .systemFont(ofSize: 16, weight: .medium)
-        lbl.translatesAutoresizingMaskIntoConstraints = false
-        return lbl
-    }()
-
-    init(user: User, videos: [Video]) {
-        self.vm = ProfileViewModel(user: user, videos: videos)
-        super.init(nibName: nil, bundle: nil)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .white
-        setupViews()
-        configure()
-    }
-
-    // MARK: - Setup
-    private func setupViews() {
-        view.addSubview(avatarImageView)
-        view.addSubview(infoLabel)
-
-        NSLayoutConstraint.activate([
-            // Avatar
-            avatarImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
-            avatarImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            avatarImageView.widthAnchor.constraint(equalToConstant: 80),
-            avatarImageView.heightAnchor.constraint(equalToConstant: 80),
-
-            // Info Label
-            infoLabel.topAnchor.constraint(equalTo: avatarImageView.bottomAnchor, constant: 20),
-            infoLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            infoLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
-        ])
-    }
-
-    private func configure() {
-        infoLabel.text = """
-        \(vm.username)
-        Videos: \(vm.videoCount)
-        Likes: \(vm.totalLikes)
-        """
-
-        if let url = vm.avatarURL {
-            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-                guard let data = data, let image = UIImage(data: data) else { return }
-                DispatchQueue.main.async {
-                    self?.avatarImageView.image = image
-                }
-            }.resume()
-        } else {
-            avatarImageView.image = UIImage(systemName: "person.crop.circle.fill")
-        }
-    }
-}
-
-
 final class ProfileViewController: UIViewController {
 
     private let user: User
@@ -115,6 +37,11 @@ final class ProfileViewController: UIViewController {
         setupCollectionView()
         bindViewModel()
         viewModel.load()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
     }
 
     private func bindViewModel() {
@@ -179,7 +106,7 @@ extension ProfileViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
         if kind == UICollectionView.elementKindSectionHeader {
             let header = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: ProfileHeaderView.identifier, for: indexPath) as! ProfileHeaderView
-            header.configure(with: user.name)
+            header.configure(with: user.name, likes: viewModel.totalLikesCount)
             return header
         }
         return UICollectionReusableView()
@@ -218,19 +145,28 @@ final class ProfileHeaderView: UICollectionReusableView {
         return label
     }()
     
+    private let likesLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14, weight: .semibold)
+        label.textAlignment = .right
+        return label
+    }()
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
+        backgroundColor = UIColor(named: "profileColour") ?? .systemBackground
         setupUI()
     }
     
     required init?(coder: NSCoder) { fatalError() }
     
-    func configure(with name: String?) {
+    func configure(with name: String?, likes: Int?) {
         nameLabel.text = name ?? "Anonymous User"
+        likesLabel.text = "You have liked \(likes ?? 0) video(s)"
     }
     
     private func setupUI() {
-        [avatarImageView, nameLabel].forEach {
+        [avatarImageView, nameLabel, likesLabel].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             addSubview($0)
         }
@@ -243,7 +179,11 @@ final class ProfileHeaderView: UICollectionReusableView {
             
             nameLabel.topAnchor.constraint(equalTo: avatarImageView.bottomAnchor, constant: 12),
             nameLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            nameLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20)
+            nameLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+            
+            likesLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 12),
+            likesLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+            likesLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20)
         ])
     }
 }

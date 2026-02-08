@@ -9,7 +9,7 @@
 import UIKit
 import AVFoundation
 
-final class VideoCelll: UICollectionViewCell {
+final class VideoCell: UICollectionViewCell {
 
     static let identifier = "VideoCell"
 
@@ -110,17 +110,19 @@ final class VideoCelll: UICollectionViewCell {
             print("❌ No playable URL")
             return
         }
-
+       
         preparePlayer(url: url)
     }
 
     private func preparePlayer(url: URL) {
-        cleanup()
 
         currentVideoURL = url
         loadingIndicator.startAnimating()
         errorView.isHidden = true
-        let item = AVPlayerItem(url: url)
+        let asset = AVURLAsset(url: url,
+            options: [AVURLAssetPreferPreciseDurationAndTimingKey: true]
+        )
+        let item = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: item)
         player.isMuted = true
 
@@ -130,6 +132,7 @@ final class VideoCelll: UICollectionViewCell {
                 case .readyToPlay:
                     self?.loadingIndicator.stopAnimating()
                     self?.errorView.isHidden = true
+                    self?.player?.isMuted = false
                 case .failed:
                     print("❌ Player Item Failed: \(String(describing: item.error))")
                     self?.showError()
@@ -151,7 +154,9 @@ final class VideoCelll: UICollectionViewCell {
     }
 
     func play() {
-        player?.play()
+        guard let player else { return }
+        player.play()
+        contentView.sendSubviewToBack(videoContainer)
         loadingIndicator.stopAnimating()
         UIView.animate(withDuration: 0.25) {
             self.placeholderImageView.alpha = 0
@@ -196,7 +201,7 @@ final class VideoCelll: UICollectionViewCell {
         actionStack.addArrangedSubview(makeButton("message.fill"))
         actionStack.addArrangedSubview(makeButton("arrowshape.turn.up.right.fill"))
 
-        [loadingIndicator, errorView, videoContainer, placeholderImageView, usernameLabel, captionLabel, actionStack].forEach {
+        [videoContainer, placeholderImageView, usernameLabel, captionLabel, actionStack, loadingIndicator, errorView ].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             contentView.addSubview($0)
         }
@@ -205,6 +210,7 @@ final class VideoCelll: UICollectionViewCell {
         errorView.addSubview(retryButton)
 
         usernameLabel.isUserInteractionEnabled = true
+        retryButton.isUserInteractionEnabled = true
         NSLayoutConstraint.activate([
             videoContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
             videoContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),

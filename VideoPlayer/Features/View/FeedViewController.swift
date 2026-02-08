@@ -90,8 +90,10 @@ extension FeedViewController: UICollectionViewDelegate,
         }
         
         cell.onLikeTap = { [weak self] in
-            self?.viewModel.toggleLike(for: video)
-            cell.updateLikeAppearance(isLiked: self?.viewModel.isLiked(video) ?? false, animated: true)
+            guard let self = self else { return }
+            self.viewModel.toggleLike(for: video)
+            let liked = self.viewModel.isLiked(video)
+            cell.updateLikeAppearance(isLiked: liked, animated: true)
         }
         return cell
     }

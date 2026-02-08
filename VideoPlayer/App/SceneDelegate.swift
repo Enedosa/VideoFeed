@@ -11,7 +11,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
-
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         let window = UIWindow(windowScene: windowScene)
@@ -21,7 +20,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let feedNav = UINavigationController(rootViewController: feedVC)
         feedNav.tabBarItem = UITabBarItem(title: "Feed", image: UIImage(systemName: "video"), tag: 0)
         
-        let dummyUser = User(id: 0, name: "John Doe", url: nil)
+        let dummyUser = User(id: 0, name: "Profile", url: nil)
         let profileVC = ProfileViewController(user: dummyUser)
         let profileNav = UINavigationController(rootViewController: profileVC)
         profileNav.tabBarItem = UITabBarItem(title: "Profile", image: UIImage(systemName: "person"), tag: 1)

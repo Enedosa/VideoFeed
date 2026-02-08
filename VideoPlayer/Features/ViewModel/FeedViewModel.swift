@@ -56,4 +56,8 @@ final class FeedViewModel {
         guard videos.indices.contains(index) else { return nil }
         return videos[index]
     }
+    
+    var totalLikesCount: Int {
+        return likesStore.ids.count
+    }
 }
