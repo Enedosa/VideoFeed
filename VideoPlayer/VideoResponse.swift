@@ -85,15 +85,32 @@ struct VideoPicture: Codable {
 }
 
 
+//extension Video {
+//    var bestPlayableURL: URL? {
+//        // Pick the smallest width MP4 video
+//        guard let urlString = videoFiles?
+//            .sorted(by: { $0.width ?? 0 < $1.width ?? 0 })
+//            .first(where: { $0.fileType?.rawValue ?? "" == "video/mp4" })?
+//            .link else {
+//                return nil
+//        }
+//        return URL(string: urlString)
+//    }
+//}
 extension Video {
     var bestPlayableURL: URL? {
-        // Pick the smallest width MP4 video
-        guard let urlString = videoFiles?
-            .sorted(by: { $0.width ?? 0 < $1.width ?? 0 })
-            .first(where: { $0.fileType?.rawValue ?? "" == "video/mp4" })?
-            .link else {
-                return nil
-        }
-        return URL(string: urlString)
+        // 1. Ensure files exist
+        guard let files = videoFiles else { return nil }
+
+        // 2. Filter for mp4 files using rawValue to avoid enum member errors
+        let mp4s = files.filter { $0.fileType?.rawValue.lowercased().contains("mp4") == true }
+
+        // 3. Sort by width: Smallest width first
+        let sortedMp4s = mp4s.sorted { ($0.width ?? 0) < ($1.width ?? 0) }
+
+        // 4. Take the very first (smallest) one
+        guard let link = sortedMp4s.first?.link else { return nil }
+        
+        return URL(string: link)
     }
 }

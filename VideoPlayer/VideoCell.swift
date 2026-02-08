@@ -10,38 +10,32 @@ import UIKit
 import AVFoundation
 
 final class VideoCell: UICollectionViewCell {
-    static let identifier = "VideoCell"
-    private var isLiked = false
-    var onUsernameTap: (() -> Void)?
 
-    private var player: AVQueuePlayer?
+    static let identifier = "VideoCell"
+
+    var onUsernameTap: (() -> Void)?
+    var onLikeTap: (() -> Void)?
+    
+    private var player: AVPlayer?
     private var playerLayer: AVPlayerLayer?
-    private var playerLooper: AVPlayerLooper?
 
     private let videoContainer = UIView()
-    
+
     private let placeholderImageView: UIImageView = {
         let iv = UIImageView()
+        iv.backgroundColor = .black
         iv.contentMode = .scaleAspectFill
         iv.clipsToBounds = true
-        iv.backgroundColor = .darkGray
         return iv
     }()
-    
+
     private let usernameLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
-        label.font = .systemFont(ofSize: 16, weight: .bold)
-        label.isUserInteractionEnabled = true
+        label.font = .boldSystemFont(ofSize: 16)
         return label
     }()
-    
-    private lazy var likeButton: UIButton = {
-        let btn = createActionButton(icon: "heart.fill")
-        btn.addTarget(self, action: #selector(didTapLike), for: .touchUpInside)
-        return btn
-    }()
-    
+
     private let captionLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
@@ -50,171 +44,161 @@ final class VideoCell: UICollectionViewCell {
         return label
     }()
     
-    private let actionStack: UIStackView = {
-        let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 25
-        stack.alignment = .center
-        return stack
+    private lazy var likeButton: UIButton = {
+        let btn = makeButton("heart.fill")
+        btn.addTarget(self, action: #selector(didTapLike), for: .touchUpInside)
+        return btn
     }()
+
+    private let actionStack = UIStackView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupLayout()
         setupGestures()
     }
-    
-    required init?(coder: NSCoder) { fatalError() }
 
-    func configure(with video: Video, isLiked: Bool, likeAction: (() -> Void)? = nil) {
-  
-        self.likeButton.isSelected = isLiked
-        usernameLabel.text = "@\(video.user?.name?.replacingOccurrences(of: " ", with: "_").lowercased() ?? "user")"
-        
-        captionLabel.text = formatCaption(from: video.url)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
-        if let imageUrl = video.image, let url = URL(string: imageUrl) {
-            loadPlaceholder(from: url)
+    func configure(with video: Video, isLiked: Bool) {
+        cleanup()
+        updateLikeAppearance(isLiked: isLiked, animated: false)
+        usernameLabel.text = "@\(video.user?.name?.lowercased() ?? "user")"
+        captionLabel.text = video.url ?? ""
+
+        if let preview = video.image,
+           let url = URL(string: preview) {
+            loadPlaceholder(url: url)
         }
-        
-        if let videoURLString = video.videoFiles?.first(where: { $0.quality?.rawValue ?? "" == "hd" })?.link ?? video.videoFiles?.first?.link,
-           let url = URL(string: videoURLString) {
-            setupPlayer(with: url)
+
+        guard let url = video.bestPlayableURL else {
+            print("❌ No playable URL")
+            return
         }
+
+        preparePlayer(url: url)
     }
-    
-    private func formatCaption(from urlString: String?) -> String {
-        guard let urlString = urlString, let slug = urlString.split(separator: "/").last else {
-            return "Discover amazing content on Pexels"
-        }
-        let words = slug.split(separator: "-").dropLast()
-        return words.joined(separator: " ").capitalized
-    }
-    
-    private func setupPlayer(with url: URL) {
+
+    private func preparePlayer(url: URL) {
         let item = AVPlayerItem(url: url)
-        player = AVQueuePlayer(playerItem: item)
-        playerLooper = AVPlayerLooper(player: player!, templateItem: item)
-        
-        playerLayer = AVPlayerLayer(player: player)
-        playerLayer?.frame = contentView.bounds
-        playerLayer?.videoGravity = .resizeAspectFill
-        
-        if let layer = playerLayer {
-            videoContainer.layer.addSublayer(layer)
-        }
+        let player = AVPlayer(playerItem: item)
+        player.isMuted = true
+
+        let layer = AVPlayerLayer(player: player)
+        layer.videoGravity = .resizeAspectFill
+        layer.frame = contentView.bounds
+
+        videoContainer.layer.addSublayer(layer)
+
+        self.player = player
+        self.playerLayer = layer
     }
 
     func play() {
         player?.play()
-        UIView.animate(withDuration: 0.3) {
+        UIView.animate(withDuration: 0.25) {
             self.placeholderImageView.alpha = 0
         }
     }
-    
+
     func pause() {
         player?.pause()
     }
-   
-    override func prepareForReuse() {
-        super.prepareForReuse()
-        isLiked = false
-        likeButton.tintColor = .white
-        likeButton.transform = .identity
+
+    private func cleanup() {
         player?.pause()
-        playerLayer?.removeFromSuperlayer()
         player = nil
-        playerLooper = nil
-        placeholderImageView.image = nil
+        playerLayer?.removeFromSuperlayer()
+        playerLayer = nil
         placeholderImageView.alpha = 1
     }
 
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        cleanup()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer?.frame = contentView.bounds
+    }
+
+    private func setupLayout() {
+        contentView.backgroundColor = .black
+
+        actionStack.axis = .vertical
+        actionStack.spacing = 24
+        actionStack.addArrangedSubview(likeButton)
+        actionStack.addArrangedSubview(makeButton("message.fill"))
+        actionStack.addArrangedSubview(makeButton("arrowshape.turn.up.right.fill"))
+
+        [videoContainer, placeholderImageView, usernameLabel, captionLabel, actionStack].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            contentView.addSubview($0)
+        }
+
+        usernameLabel.isUserInteractionEnabled = true
+        NSLayoutConstraint.activate([
+            videoContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
+            videoContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            videoContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            videoContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            placeholderImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            placeholderImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            placeholderImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            placeholderImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+
+            usernameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            usernameLabel.bottomAnchor.constraint(equalTo: captionLabel.topAnchor, constant: -8),
+
+            captionLabel.leadingAnchor.constraint(equalTo: usernameLabel.leadingAnchor),
+            captionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -100),
+            captionLabel.trailingAnchor.constraint(equalTo: actionStack.leadingAnchor, constant: -12),
+
+            actionStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            actionStack.bottomAnchor.constraint(equalTo: captionLabel.bottomAnchor)
+        ])
+    }
     private func setupGestures() {
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleUserTap))
         usernameLabel.addGestureRecognizer(tap)
     }
     
-    @objc private func handleUserTap() {
-        onUsernameTap?()
+    @objc private func handleUserTap() { onUsernameTap?() }
+    
+    @objc private func didTapLike() {
+        onLikeTap?()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
     
-    private func setupLayout() {
-        contentView.backgroundColor = .black
-        
-        [videoContainer, placeholderImageView, usernameLabel, captionLabel, actionStack].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            contentView.addSubview($0)
-        }
-        
-        let comment = createActionButton(icon: "message.fill")
-        let share = createActionButton(icon: "arrowshape.turn.up.right.fill")
-        [likeButton, comment, share].forEach { actionStack.addArrangedSubview($0) }
-        
-        NSLayoutConstraint.activate([
-            videoContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
-            videoContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            videoContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            videoContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            
-            placeholderImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            placeholderImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            placeholderImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            placeholderImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            
-            actionStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -15),
-            actionStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -100),
-            
-            usernameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 15),
-            usernameLabel.bottomAnchor.constraint(equalTo: captionLabel.topAnchor, constant: -10),
-            
-            captionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 15),
-            captionLabel.trailingAnchor.constraint(equalTo: actionStack.leadingAnchor, constant: -20),
-            captionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
-        ])
-    }
-    @objc private func didTapLike() {
-        isLiked.toggle()
-        updateLikeAppearance(animated: true)
-        //haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-    }
-
-    func updateLikeAppearance(animated: Bool) {
-        let config = UIImage.SymbolConfiguration(pointSize: 26, weight: .semibold)
-        let heartImage = UIImage(systemName: "heart.fill", withConfiguration: config)
-        
-        likeButton.setImage(heartImage, for: .normal)
+    func updateLikeAppearance(isLiked: Bool, animated: Bool) {
         likeButton.tintColor = isLiked ? .systemRed : .white
         
         if animated && isLiked {
             likeButton.transform = CGAffineTransform(scaleX: 0.7, y: 0.7)
-            
-            UIView.animate(withDuration: 0.5,
-                           delay: 0,
-                           usingSpringWithDamping: 0.4,
-                           initialSpringVelocity: 0.6,
-                           options: .allowUserInteraction,
-                           animations: {
+            UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.4, initialSpringVelocity: 0.6, options: .allowUserInteraction) {
                 self.likeButton.transform = .identity
-            }, completion: nil)
+            }
         }
     }
-    
-   
-    private func createActionButton(icon: String) -> UIButton {
-        let btn = UIButton(type: .system)
-        let cfg = UIImage.SymbolConfiguration(pointSize: 26, weight: .semibold)
-        btn.setImage(UIImage(systemName: icon, withConfiguration: cfg), for: .normal)
-        btn.tintColor = .white
-        return btn
+    private func makeButton(_ icon: String) -> UIButton {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 26, weight: .semibold)
+        button.setImage(UIImage(systemName: icon, withConfiguration: config), for: .normal)
+        button.tintColor = .white
+        return button
     }
-    
-    private func loadPlaceholder(from url: URL) {
+
+    private func loadPlaceholder(url: URL) {
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            if let data = data, let img = UIImage(data: data) {
-                DispatchQueue.main.async { self?.placeholderImageView.image = img }
+            guard let data, let img = UIImage(data: data) else { return }
+            DispatchQueue.main.async {
+                self?.placeholderImageView.image = img
             }
         }.resume()
     }
 }
+

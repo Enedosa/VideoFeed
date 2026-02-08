@@ -16,14 +16,17 @@ final class URLSessionNetworkClient: NetworkClient {
     private let url: URL
 
     init(
-        url: URL = URL(string:
-            "https://api.pexels.com/videos/search?query=nature&per_page=10&orientation=portrait"
-        )!,
-        session: URLSession = .shared
-    ) {
-        self.url = url
-        self.session = session
-    }
+            url: URL = URL(string: "https://api.pexels.com/videos/search?query=nature&per_page=10&orientation=portrait")!
+        ) {
+            self.url = url
+        
+            let config = URLSessionConfiguration.default
+            config.requestCachePolicy = .reloadIgnoringLocalCacheData
+            config.httpMaximumConnectionsPerHost = 1
+            config.timeoutIntervalForRequest = 10
+           
+            self.session = URLSession(configuration: config)
+        }
 
     func fetchVideos() async throws -> [Video] {
         do {

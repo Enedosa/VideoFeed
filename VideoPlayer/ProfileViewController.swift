@@ -30,7 +30,6 @@ final class ProfileViewControllerr: UIViewController {
         return lbl
     }()
 
-    // MARK: - Init
     init(user: User, videos: [Video]) {
         self.vm = ProfileViewModel(user: user, videos: videos)
         super.init(nibName: nil, bundle: nil)
@@ -40,7 +39,6 @@ final class ProfileViewControllerr: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
@@ -192,7 +190,7 @@ extension ProfileViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let feedVC = FeedViewController()
         
-        feedVC.setInitialVideos(viewModel.videos, at: indexPath.item)
+//        feedVC.setInitialVideos(viewModel.videos, at: indexPath.item)
         
         navigationController?.pushViewController(feedVC, animated: true)
     }
