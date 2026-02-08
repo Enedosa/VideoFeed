@@ -93,6 +93,7 @@ extension Video {
         guard let link = sortedMp4s.first?.link else { return nil }
         return URL(string: link)
     }
+    
     static func formatCaption(from urlString: String?) -> String {
             guard let urlString = urlString, let slug = urlString.split(separator: "/").last else {
                 return "Discover amazing content on Pexels"
