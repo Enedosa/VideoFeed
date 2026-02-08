@@ -7,14 +7,17 @@ Supports autoplay, smooth paging, graceful error handling, and local state manag
 ---
 
 ## 📱 Preview
+<img width="150" height="400" alt="Screenshot 2026-02-08 at 6 38 32 PM" src="https://github.com/user-attachments/assets/e5a56592-6498-4526-a046-bd949480a6bc" />
 
 ### Feed autoplay & swipe
 ![Feed Demo](assets/FeedAndProfile.gif)
+
 ![FeedAndProfile](https://github.com/user-attachments/assets/ea3b66e4-4e0a-424c-8f28-73bc7a16dab9)
 
 
 ### Error & retry state
 ![Error State](assets/RetryFeature.gif)
+
 ![RetryFeature](https://github.com/user-attachments/assets/408008b9-0545-40a5-807e-74af34e68171)
 
 
