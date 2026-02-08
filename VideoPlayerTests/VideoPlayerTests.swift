@@ -18,19 +18,78 @@ final class VideoPlayerTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    var sut: FeedViewModel!
+    var mockNetwork: MockNetworkClient!
+
+    override func setUp() {
+        super.setUp()
+        mockNetwork = MockNetworkClient()
+        sut = FeedViewModel(network: mockNetwork)
     }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    override func tearDown() {
+        sut = nil
+        mockNetwork = nil
+        super.tearDown()
+    }
+    
+    private func makeMockVideo(id: Int) -> Video {
+       
+        let mockFile = VideoFile(
+            id: id * 10,
+            quality: .hd,
+            fileType: .videoMp4,
+            width: 1080,
+            height: 1920,
+            fps: 30.0,
+            link: "https://test.com/vid.mp4",
+            size: 5000000
+        )
+
+        return Video(
+            id: id,
+            width: 1080,
+            height: 1920,
+            duration: 15, url: "https://pexels.com/video/nature-sunset-\(id)/",
+            image: "https://test.com/img.jpg",
+            user: User(id: 1, name: "Test User", url: ""),
+            videoFiles: [mockFile],
+            videoPictures: []
+        )
+    }
+    
+    func test_loadVideos_success() async throws {
+        let expectation = XCTestExpectation(description: "Videos updated")
+        let mockVideos = [makeMockVideo(id: 123)]
+        mockNetwork.result = .success(mockVideos)
+        
+        sut.onVideosUpdated = {
+            expectation.fulfill()
         }
+        
+        sut.load()
+        
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(sut.videos.count, 1)
+        XCTAssertEqual(sut.videos.first?.id, 123)
+    }
+    
+    func test_toggleLike_updatesState() throws {
+        let video = makeMockVideo(id: 99)
+        
+        XCTAssertFalse(sut.isLiked(video))
+        sut.toggleLike(for: video)
+        XCTAssertTrue(sut.isLiked(video))
+        sut.toggleLike(for: video)
+    }
+
+
+    func test_captionFormatting() throws {
+        
+        let url = "https://pexels.com/video/nature-sunset-beautiful-123/"
+        let result = Video.formatCaption(from: url)
+        
+        XCTAssertEqual(result, "Nature Sunset Beautiful")
     }
 
 }
